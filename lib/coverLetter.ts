@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ResumeData } from "@/types";
+import { CLAUDE_MODEL } from "./claudeConfig";
 
 // Initialize Claude client
 const anthropic = new Anthropic({
@@ -50,7 +51,7 @@ Generate the cover letter now. Return only the cover letter text, no additional 
 
   try {
     const message = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: CLAUDE_MODEL,
       max_tokens: 2048,
       messages: [
         {

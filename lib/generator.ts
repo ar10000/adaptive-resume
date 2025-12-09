@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ResumeData, MatchAnalysis } from "@/types";
+import { CLAUDE_MODEL } from "./claudeConfig";
 
 // Initialize Claude client
 const anthropic = new Anthropic({
@@ -76,7 +77,7 @@ Remember: You can ONLY work with what's in the original resume. Never add, inven
 
   try {
     const message = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: CLAUDE_MODEL,
       max_tokens: 4096,
       messages: [
         {
