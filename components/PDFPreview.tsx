@@ -1,97 +1,383 @@
 "use client";
 
 import { Document, Page, pdfjs } from "react-pdf";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { ResumeData } from "@/types";
+import { exportResumeToPDF } from "@/lib/exportPDF";
+import { exportResumeToDOCX } from "@/lib/exportDOCX";
+import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+import "react-pdf/dist/esm/Page/TextLayer.css";
 
 interface PDFPreviewProps {
-  pdfUrl: string | null;
+  resumeData: ResumeData | null;
 }
 
-export default function PDFPreview({ pdfUrl }: PDFPreviewProps) {
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
+export default function PDFPreview({ resumeData }: PDFPreviewProps) {
+  const [numPages, setNumPages] = useState<number>(0);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [zoom, setZoom] = useState<number>(1.0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState<"pdf" | "docx" | null>(null);
 
+  // Initialize PDF.js worker
   useEffect(() => {
     if (typeof window !== "undefined") {
       pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
     }
   }, []);
 
-  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-    setNumPages(numPages);
-    setPageNumber(1);
-    setLoading(false);
-    setError(null);
-  }
+  // Generate PDF blob from resumeData
+  useEffect(() => {
+    if (!resumeData) {
+      setPdfBlob(null);
+      setPdfUrl(null);
+      setNumPages(0);
+      return;
+    }
 
-  function onDocumentLoadError(error: Error) {
+    const generatePDF = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const blob = exportResumeToPDF(resumeData);
+        setPdfBlob(blob);
+
+        // Create object URL for preview
+        const url = URL.createObjectURL(blob);
+        
+        // Clean up previous URL
+        if (pdfUrl) {
+          URL.revokeObjectURL(pdfUrl);
+        }
+        
+        setPdfUrl(url);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to generate PDF");
+        setPdfBlob(null);
+        setPdfUrl(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    generatePDF();
+
+    // Cleanup function
+    return () => {
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+    };
+  }, [resumeData]);
+
+  const handleDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+  }, []);
+
+  const handleDocumentLoadError = useCallback((error: Error) => {
     setError(`Failed to load PDF: ${error.message}`);
     setLoading(false);
-  }
+  }, []);
 
-  if (!pdfUrl) {
+  const handleZoomIn = () => {
+    setZoom((prev) => Math.min(prev + 0.1, 2.0));
+  };
+
+  const handleZoomOut = () => {
+    setZoom((prev) => Math.max(prev - 0.1, 0.5));
+  };
+
+  const handleResetZoom = () => {
+    setZoom(1.0);
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!resumeData || !pdfBlob) return;
+
+    setDownloading("pdf");
+    try {
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${resumeData.personalInfo.name.replace(/\s+/g, "_")}_Resume.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to download PDF");
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const handleDownloadDOCX = async () => {
+    if (!resumeData) return;
+
+    setDownloading("docx");
+    try {
+      const blob = await exportResumeToDOCX(resumeData);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${resumeData.personalInfo.name.replace(/\s+/g, "_")}_Resume.docx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to download DOCX");
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const handleCopyToClipboard = async () => {
+    if (!resumeData) return;
+
+    try {
+      // Convert resume data to plain text format
+      let text = `${resumeData.personalInfo.name}\n`;
+      
+      if (resumeData.personalInfo.email) {
+        text += `${resumeData.personalInfo.email}\n`;
+      }
+      if (resumeData.personalInfo.phone) {
+        text += `${resumeData.personalInfo.phone}\n`;
+      }
+      if (resumeData.personalInfo.location) {
+        text += `${resumeData.personalInfo.location}\n`;
+      }
+      if (resumeData.personalInfo.linkedIn) {
+        text += `${resumeData.personalInfo.linkedIn}\n`;
+      }
+      
+      text += `\n${resumeData.summary || ""}\n\n`;
+      
+      text += "WORK EXPERIENCE\n";
+      for (const exp of resumeData.workExperience) {
+        text += `\n${exp.title} | ${exp.company}\n`;
+        text += `${exp.startDate} - ${exp.endDate}\n`;
+        for (const bullet of exp.bullets) {
+          const displayBullet = bullet.replace(/\[LESS_RELEVANT\]/g, "").trim();
+          if (displayBullet) {
+            text += `• ${displayBullet}\n`;
+          }
+        }
+      }
+      
+      text += "\nEDUCATION\n";
+      for (const edu of resumeData.education) {
+        text += `\n${edu.degree} in ${edu.field}\n`;
+        text += `${edu.institution} | ${edu.graduationDate}\n`;
+      }
+      
+      text += "\nSKILLS\n";
+      text += `${resumeData.skills.join(", ")}\n`;
+      
+      if (resumeData.certifications && resumeData.certifications.length > 0) {
+        text += "\nCERTIFICATIONS\n";
+        for (const cert of resumeData.certifications) {
+          text += `• ${cert}\n`;
+        }
+      }
+
+      await navigator.clipboard.writeText(text);
+      
+      // Show temporary success message
+      const button = document.querySelector('[data-copy-button]') as HTMLElement;
+      if (button) {
+        const originalText = button.textContent;
+        button.textContent = "Copied!";
+        setTimeout(() => {
+          if (button) button.textContent = originalText;
+        }, 2000);
+      }
+    } catch (err) {
+      setError("Failed to copy to clipboard");
+    }
+  };
+
+  if (!resumeData) {
     return (
       <div className="flex h-full items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50">
-        <p className="text-gray-500">No PDF to preview</p>
+        <p className="text-gray-500">No resume data to preview</p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center rounded-lg border border-gray-200 bg-white">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-600 border-r-transparent"></div>
+          <p className="mt-4 text-sm text-gray-600">Generating preview...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center rounded-lg border border-red-200 bg-red-50 p-4">
+        <div className="text-center">
+          <p className="text-sm font-medium text-red-800">{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              // Retry by triggering useEffect
+              if (resumeData) {
+                const blob = exportResumeToPDF(resumeData);
+                setPdfBlob(blob);
+                const url = URL.createObjectURL(blob);
+                if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+                setPdfUrl(url);
+              }
+            }}
+            className="mt-2 text-sm text-red-600 underline"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-auto rounded-lg border border-gray-200 bg-white p-4">
-      {error && (
-        <div className="mb-4 rounded-md bg-red-50 p-4 text-sm text-red-800">
-          {error}
+    <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
+      {/* Controls Bar */}
+      <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2">
+        <div className="flex items-center gap-2">
+          {/* Zoom Controls */}
+          <button
+            onClick={handleZoomOut}
+            disabled={zoom <= 0.5}
+            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Zoom Out"
+          >
+            −
+          </button>
+          <span className="min-w-[60px] text-center text-sm text-gray-600">
+            {Math.round(zoom * 100)}%
+          </span>
+          <button
+            onClick={handleZoomIn}
+            disabled={zoom >= 2.0}
+            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Zoom In"
+          >
+            +
+          </button>
+          <button
+            onClick={handleResetZoom}
+            className="ml-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            title="Reset Zoom"
+          >
+            Reset
+          </button>
         </div>
-      )}
-      {loading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-600 border-r-transparent"></div>
-        </div>
-      )}
-      <div className="mb-4 flex items-center justify-between">
-        <button
-          onClick={() => setPageNumber((prev) => Math.max(1, prev - 1))}
-          disabled={pageNumber <= 1}
-          className="rounded-md bg-primary-600 px-4 py-2 text-white disabled:opacity-50"
-        >
-          Previous
-        </button>
-        <span className="text-sm text-gray-600">
-          Page {pageNumber} of {numPages || "?"}
-        </span>
-        <button
-          onClick={() =>
-            setPageNumber((prev) => Math.min(numPages || 1, prev + 1))
-          }
-          disabled={pageNumber >= (numPages || 1)}
-          className="rounded-md bg-primary-600 px-4 py-2 text-white disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
-      <Document
-        file={pdfUrl}
-        onLoadSuccess={onDocumentLoadSuccess}
-        onLoadError={onDocumentLoadError}
-        loading={
-          <div className="flex items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-600 border-r-transparent"></div>
+
+        {/* Page Count */}
+        {numPages > 0 && (
+          <div className="text-sm text-gray-600">
+            {numPages} page{numPages !== 1 ? "s" : ""}
           </div>
-        }
-        className="flex justify-center"
-      >
-        <Page
-          pageNumber={pageNumber}
-          renderTextLayer={true}
-          renderAnnotationLayer={true}
-          className="shadow-lg"
-          width={600}
-        />
-      </Document>
+        )}
+
+        {/* Download Buttons */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleDownloadPDF}
+            disabled={!pdfBlob || downloading === "pdf"}
+            className="rounded-md bg-primary-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {downloading === "pdf" ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent"></span>
+                Downloading...
+              </span>
+            ) : (
+              "Download PDF"
+            )}
+          </button>
+          <button
+            onClick={handleDownloadDOCX}
+            disabled={!resumeData || downloading === "docx"}
+            className="rounded-md bg-gray-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {downloading === "docx" ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent"></span>
+                Downloading...
+              </span>
+            ) : (
+              "Download DOCX"
+            )}
+          </button>
+          <button
+            onClick={handleCopyToClipboard}
+            data-copy-button
+            className="rounded-md border border-gray-300 bg-white px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            title="Copy resume as plain text"
+          >
+            Copy Text
+          </button>
+        </div>
+      </div>
+
+      {/* PDF Preview Area */}
+      <div className="flex-1 overflow-auto bg-gray-100 p-4">
+        {pdfUrl ? (
+          <div className="flex flex-col items-center gap-4">
+            <Document
+              file={pdfUrl}
+              onLoadSuccess={handleDocumentLoadSuccess}
+              onLoadError={handleDocumentLoadError}
+              loading={
+                <div className="flex items-center justify-center py-12">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-600 border-r-transparent"></div>
+                </div>
+              }
+              className="flex flex-col items-center"
+            >
+              {Array.from(new Array(numPages), (el, index) => (
+                <div
+                  key={`page_${index + 1}`}
+                  className="mb-4 shadow-lg"
+                  style={{
+                    transform: `scale(${zoom})`,
+                    transformOrigin: "top center",
+                    transition: "transform 0.2s ease-in-out",
+                  }}
+                >
+                  <Page
+                    pageNumber={index + 1}
+                    width={612 * zoom} // Letter width in points (8.5" * 72pt/inch)
+                    renderTextLayer={true}
+                    renderAnnotationLayer={false}
+                    className="border border-gray-300 bg-white"
+                  />
+                  {/* Page Number Badge */}
+                  {numPages > 1 && (
+                    <div className="mt-2 text-center">
+                      <span className="inline-block rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-700">
+                        Page {index + 1} of {numPages}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </Document>
+          </div>
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <p className="text-gray-500">Generating PDF preview...</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-

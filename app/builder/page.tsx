@@ -19,7 +19,7 @@ export default function BuilderPage() {
   const [originalResumeData, setOriginalResumeData] = useState<ResumeData | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [matchAnalysis, setMatchAnalysis] = useState<MatchAnalysisType | null>(null);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  // PDF preview is now handled by PDFPreview component
   const [coverLetter, setCoverLetter] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"resume" | "coverLetter">("resume");
   const [generatingCoverLetter, setGeneratingCoverLetter] = useState(false);
@@ -131,10 +131,6 @@ export default function BuilderPage() {
         setOriginalResumeData(resumeData);
       }
       setResumeData(data.tailoredResume);
-      
-      // Generate PDF preview
-      await generatePDFPreview(data.tailoredResume);
-      
       setCurrentStep(3);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate tailored resume");
@@ -553,27 +549,8 @@ export default function BuilderPage() {
 
                 {/* Right: PDF Preview */}
                 <div className="rounded-lg bg-white shadow-sm">
-                  <div className="border-b border-gray-200 p-4">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-semibold text-gray-900">Preview</h2>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleDownloadPDF}
-                          className="rounded-md bg-primary-600 px-4 py-2 text-sm text-white hover:bg-primary-700"
-                        >
-                          Download PDF
-                        </button>
-                        <button
-                          onClick={handleDownloadDOCX}
-                          className="rounded-md bg-gray-600 px-4 py-2 text-sm text-white hover:bg-gray-700"
-                        >
-                          Download DOCX
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="h-[calc(100vh-350px)]">
-                    <PDFPreview pdfUrl={pdfUrl} />
+                  <div className="h-[calc(100vh-200px)]">
+                    <PDFPreview resumeData={resumeData} />
                   </div>
                 </div>
                 </div>
