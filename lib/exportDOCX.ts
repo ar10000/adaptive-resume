@@ -7,184 +7,345 @@ import {
   AlignmentType,
   TabStopType,
   TabStopPosition,
-  SectionType,
+  BorderStyle,
+  WidthType,
+  LevelFormat,
+  convertInchesToTwip,
 } from "docx";
 import { ResumeData } from "@/types";
+import resumeStyles, {
+  formatSectionHeader,
+  formatDate,
+  formatContactInfo,
+  getBulletCharacter,
+} from "./styles/resumeStyles";
 
 /**
- * Generates a clean, ATS-friendly Word document from ResumeData
+ * Generates a professionally styled, ATS-optimized Word document resume
+ * Uses comprehensive styling system with proper Word styles for maximum compatibility
  * @param resumeData - The resume data to export
  * @returns Blob containing the DOCX file
  */
 export async function exportResumeToDOCX(resumeData: ResumeData): Promise<Blob> {
   const children: Paragraph[] = [];
 
+  // ===== DOCUMENT STYLES =====
+  const styles = {
+    paragraphStyles: [
+      // Resume Name Style
+      {
+        id: "resumeName",
+        name: "Resume Name",
+        basedOn: "Normal",
+        run: {
+          size: 36, // 18pt (half-points: 18 * 2 = 36)
+          bold: true,
+          font: resumeStyles.fonts.primary.family,
+          color: resumeStyles.colors.primary.text.replace("#", ""),
+        },
+        paragraph: {
+          alignment:
+            resumeStyles.layout.nameAlignment === "center"
+              ? AlignmentType.CENTER
+              : AlignmentType.LEFT,
+          spacing: {
+            after: 120, // 6pt spacing after name
+          },
+        },
+      },
+      // Contact Info Style
+      {
+        id: "contactInfo",
+        name: "Contact Info",
+        basedOn: "Normal",
+        run: {
+          size: 20, // 10pt
+          font: resumeStyles.fonts.primary.family,
+          color: "555555", // Gray color
+        },
+        paragraph: {
+          alignment:
+            resumeStyles.layout.contactAlignment === "center"
+              ? AlignmentType.CENTER
+              : AlignmentType.LEFT,
+          spacing: {
+            after: 280, // 14pt spacing after contact (section spacing)
+          },
+        },
+      },
+      // Section Header Style
+      {
+        id: "sectionHeader",
+        name: "Section Header",
+        basedOn: "Normal",
+        run: {
+          size: 24, // 12pt
+          bold: true,
+          allCaps: true,
+          font: resumeStyles.fonts.primary.family,
+          color: resumeStyles.colors.primary.text.replace("#", ""),
+        },
+        paragraph: {
+          spacing: {
+            before: 320, // 16pt before (sectionHeaderAbove)
+            after: 160, // 8pt after (sectionHeaderBelow)
+          },
+          border: resumeStyles.sections.headers.underline
+            ? {
+                bottom: {
+                  color: "C8C8C8", // RGB(200,200,200) in hex
+                  space: 1,
+                  style: BorderStyle.SINGLE,
+                  size: 6, // 1pt
+                },
+              }
+            : undefined,
+        },
+      },
+      // Job Title Style
+      {
+        id: "jobTitle",
+        name: "Job Title",
+        basedOn: "Normal",
+        run: {
+          size: 22, // 11pt
+          bold: true,
+          font: resumeStyles.fonts.primary.family,
+        },
+        paragraph: {
+          spacing: {
+            after: 40, // 2pt spacing
+          },
+        },
+      },
+      // Company Name Style
+      {
+        id: "companyName",
+        name: "Company Name",
+        basedOn: "Normal",
+        run: {
+          size: 22, // 11pt
+          font: resumeStyles.fonts.primary.family,
+        },
+        paragraph: {
+          spacing: {
+            after: 40, // 2pt spacing
+          },
+          tabStops: [
+            {
+              type: TabStopType.RIGHT,
+              position: TabStopPosition.MAX,
+            },
+          ],
+        },
+      },
+      // Date Style
+      {
+        id: "dateRange",
+        name: "Date Range",
+        basedOn: "Normal",
+        run: {
+          size: 22, // 11pt
+          font: resumeStyles.fonts.primary.family,
+        },
+        paragraph: {
+          alignment: AlignmentType.RIGHT,
+          spacing: {
+            after: 40, // 2pt spacing
+          },
+        },
+      },
+      // Bullet Point Style
+      {
+        id: "bulletPoint",
+        name: "Bullet Point",
+        basedOn: "Normal",
+        run: {
+          size: 20, // 10pt
+          font: resumeStyles.fonts.primary.family,
+        },
+        paragraph: {
+          spacing: {
+            after: 40, // 2pt spacing between bullets
+            line: 288, // 1.2 line height (240 * 1.2 = 288)
+          },
+          indent: {
+            left: convertInchesToTwip(resumeStyles.spacing.bulletIndent), // 0.25 inch
+            hanging: convertInchesToTwip(resumeStyles.spacing.bulletIndent), // Hanging indent
+          },
+        },
+      },
+      // Body Text Style
+      {
+        id: "bodyText",
+        name: "Body Text",
+        basedOn: "Normal",
+        run: {
+          size: 22, // 11pt
+          font: resumeStyles.fonts.primary.family,
+        },
+        paragraph: {
+          spacing: {
+            after: 180, // 9pt spacing (betweenJobs)
+          },
+        },
+      },
+      // Education Degree Style
+      {
+        id: "educationDegree",
+        name: "Education Degree",
+        basedOn: "Normal",
+        run: {
+          size: 22, // 11pt
+          bold: true,
+          font: resumeStyles.fonts.primary.family,
+        },
+        paragraph: {
+          spacing: {
+            after: 40, // 2pt spacing
+          },
+        },
+      },
+      // Skills Category Style
+      {
+        id: "skillsCategory",
+        name: "Skills Category",
+        basedOn: "Normal",
+        run: {
+          size: 20, // 10pt
+          bold: true,
+          font: resumeStyles.fonts.primary.family,
+        },
+        paragraph: {
+          spacing: {
+            after: 40, // 2pt spacing
+          },
+        },
+      },
+      // Skills List Style
+      {
+        id: "skillsList",
+        name: "Skills List",
+        basedOn: "Normal",
+        run: {
+          size: 20, // 10pt
+          font: resumeStyles.fonts.primary.family,
+        },
+        paragraph: {
+          spacing: {
+            after: 40, // 2pt spacing
+          },
+        },
+      },
+    ],
+  };
+
   // ===== HEADER SECTION =====
-  // Name (Heading 1 style, centered)
+  // Name
   children.push(
     new Paragraph({
       text: resumeData.personalInfo.name,
-      heading: HeadingLevel.HEADING_1,
-      alignment: AlignmentType.CENTER,
-      spacing: {
-        after: 120, // 6pt spacing
-      },
+      style: "resumeName",
     })
   );
 
-  // Contact Information (Normal text, centered)
-  const contactInfo: string[] = [];
-  if (resumeData.personalInfo.email) {
-    contactInfo.push(resumeData.personalInfo.email);
-  }
-  if (resumeData.personalInfo.phone) {
-    contactInfo.push(resumeData.personalInfo.phone);
-  }
-  if (resumeData.personalInfo.location) {
-    contactInfo.push(resumeData.personalInfo.location);
-  }
-  if (resumeData.personalInfo.linkedIn) {
-    contactInfo.push(resumeData.personalInfo.linkedIn);
-  }
+  // Contact Information
+  const contactLines = formatContactInfo(
+    resumeData.personalInfo,
+    resumeStyles.contact.format
+  );
 
-  if (contactInfo.length > 0) {
+  for (const line of contactLines) {
+    if (line === resumeData.personalInfo.name) continue; // Skip name, already printed
+
     children.push(
       new Paragraph({
-        children: [
-          new TextRun({
-            text: contactInfo.join(" | "),
-            size: 22, // 11pt
-            color: "000000",
-          }),
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: {
-          after: 240, // 12pt spacing
-        },
+        text: line,
+        style: "contactInfo",
       })
     );
   }
 
   // ===== SUMMARY SECTION =====
   if (resumeData.summary) {
-    // Section Header
     children.push(
       new Paragraph({
-        children: [
-          new TextRun({
-            text: "SUMMARY",
-            bold: true,
-            size: 24, // 12pt
-            color: "000000",
-            allCaps: true,
-          }),
-        ],
-        spacing: {
-          before: 240, // 12pt spacing before
-          after: 120, // 6pt spacing after
-        },
+        text: formatSectionHeader("PROFESSIONAL SUMMARY"),
+        style: "sectionHeader",
       })
     );
 
-    // Summary text
     children.push(
       new Paragraph({
-        children: [
-          new TextRun({
-            text: resumeData.summary,
-            size: 20, // 10pt
-            color: "000000",
-          }),
-        ],
-        spacing: {
-          after: 240, // 12pt spacing
-        },
+        text: resumeData.summary,
+        style: "bodyText",
       })
     );
   }
 
   // ===== WORK EXPERIENCE SECTION =====
   if (resumeData.workExperience.length > 0) {
-    // Section Header
     children.push(
       new Paragraph({
-        children: [
-          new TextRun({
-            text: "WORK EXPERIENCE",
-            bold: true,
-            size: 24, // 12pt
-            color: "000000",
-            allCaps: true,
-          }),
-        ],
-        spacing: {
-          before: 240, // 12pt spacing before
-          after: 120, // 6pt spacing after
-        },
+        text: formatSectionHeader("WORK EXPERIENCE"),
+        style: "sectionHeader",
       })
     );
 
-    // Work Experience entries
-    for (const exp of resumeData.workExperience) {
-      // Job Title and Company (Bold)
+    for (let i = 0; i < resumeData.workExperience.length; i++) {
+      const exp = resumeData.workExperience[i];
+      const isLastJob = i === resumeData.workExperience.length - 1;
+
+      // Job Title
       children.push(
         new Paragraph({
-          children: [
-            new TextRun({
-              text: `${exp.title} | ${exp.company}`,
-              bold: true,
-              size: 20, // 10pt
-              color: "000000",
-            }),
-          ],
-          spacing: {
-            before: 120, // 6pt spacing before first entry
-            after: 60, // 3pt spacing after
-          },
+          text: exp.title,
+          style: "jobTitle",
         })
       );
 
-      // Date Range (Normal)
+      // Company Name and Date Range on same line (using tabs)
+      const dateRange = formatDate(exp.startDate, exp.endDate);
       children.push(
         new Paragraph({
           children: [
             new TextRun({
-              text: `${exp.startDate} - ${exp.endDate}`,
-              size: 20, // 10pt
-              color: "000000",
+              text: exp.company,
+              style: "companyName",
+            }),
+            new TextRun({
+              text: `\t${dateRange}`, // Tab to push date to right
             }),
           ],
-          spacing: {
-            after: 60, // 3pt spacing
-          },
+          style: "companyName",
         })
       );
 
       // Bullet Points
-      for (const bullet of exp.bullets) {
+      const bulletChar = getBulletCharacter();
+      const maxBullets = resumeStyles.workExperience.bullets.maxPerRole;
+      const bulletsToShow = exp.bullets.slice(0, maxBullets);
+
+      for (const bullet of bulletsToShow) {
         // Remove [LESS_RELEVANT] marker if present
         const displayBullet = bullet.replace(/\[LESS_RELEVANT\]/g, "").trim();
         if (!displayBullet) continue;
 
         children.push(
           new Paragraph({
-            children: [
-              new TextRun({
-                text: "• ",
-                size: 20, // 10pt
-                color: "000000",
-              }),
-              new TextRun({
-                text: displayBullet,
-                size: 20, // 10pt
-                color: "000000",
-              }),
-            ],
-            indent: {
-              left: 360, // 0.25" indent for bullets
-            },
+            text: `${bulletChar} ${displayBullet}`,
+            style: "bulletPoint",
+          })
+        );
+      }
+
+      // Add spacing between jobs (except after last job)
+      if (!isLastJob) {
+        children.push(
+          new Paragraph({
+            text: "",
             spacing: {
-              after: 60, // 3pt spacing
+              after: 180, // 9pt spacing (betweenJobs)
             },
           })
         );
@@ -194,58 +355,27 @@ export async function exportResumeToDOCX(resumeData: ResumeData): Promise<Blob> 
 
   // ===== EDUCATION SECTION =====
   if (resumeData.education.length > 0) {
-    // Section Header
     children.push(
       new Paragraph({
-        children: [
-          new TextRun({
-            text: "EDUCATION",
-            bold: true,
-            size: 24, // 12pt
-            color: "000000",
-            allCaps: true,
-          }),
-        ],
-        spacing: {
-          before: 240, // 12pt spacing before
-          after: 120, // 6pt spacing after
-        },
+        text: formatSectionHeader("EDUCATION"),
+        style: "sectionHeader",
       })
     );
 
-    // Education entries
     for (const edu of resumeData.education) {
-      // Degree and Field (Bold)
+      // Degree and Field (bold)
       children.push(
         new Paragraph({
-          children: [
-            new TextRun({
-              text: `${edu.degree} in ${edu.field}`,
-              bold: true,
-              size: 20, // 10pt
-              color: "000000",
-            }),
-          ],
-          spacing: {
-            before: 120, // 6pt spacing before first entry
-            after: 60, // 3pt spacing after
-          },
+          text: `${edu.degree} in ${edu.field}`,
+          style: "educationDegree",
         })
       );
 
-      // Institution and Date (Normal)
+      // Institution and Date
       children.push(
         new Paragraph({
-          children: [
-            new TextRun({
-              text: `${edu.institution} | ${edu.graduationDate}`,
-              size: 20, // 10pt
-              color: "000000",
-            }),
-          ],
-          spacing: {
-            after: 120, // 6pt spacing
-          },
+          text: `${edu.institution} | ${edu.graduationDate}`,
+          style: "bodyText",
         })
       );
     }
@@ -253,142 +383,144 @@ export async function exportResumeToDOCX(resumeData: ResumeData): Promise<Blob> 
 
   // ===== SKILLS SECTION =====
   if (resumeData.skills.length > 0) {
-    // Section Header
     children.push(
       new Paragraph({
-        children: [
-          new TextRun({
-            text: "SKILLS",
-            bold: true,
-            size: 24, // 12pt
-            color: "000000",
-            allCaps: true,
-          }),
-        ],
-        spacing: {
-          before: 240, // 12pt spacing before
-          after: 120, // 6pt spacing after
-        },
+        text: formatSectionHeader("SKILLS"),
+        style: "sectionHeader",
       })
     );
 
-    // Skills text (comma-separated)
-    const skillsText = resumeData.skills.join(", ");
-    children.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: skillsText,
-            size: 20, // 10pt
-            color: "000000",
-          }),
-        ],
-        spacing: {
-          after: 240, // 12pt spacing
-        },
-      })
-    );
-  }
+    // Format skills based on config
+    if (
+      resumeStyles.skills.format === "categorized" &&
+      resumeData.skills.length > resumeStyles.skills.maxForCommaSeparated
+    ) {
+      // Categorized format
+      // For now, use a simple categorization (could be enhanced with AI)
+      // Group skills into common categories
+      const categorized: Record<string, string[]> = {
+        Technical: [],
+        "Tools & Platforms": [],
+        "Core Competencies": [],
+      };
 
-  // ===== CERTIFICATIONS SECTION =====
-  if (resumeData.certifications && resumeData.certifications.length > 0) {
-    // Section Header
-    children.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "CERTIFICATIONS",
-            bold: true,
-            size: 24, // 12pt
-            color: "000000",
-            allCaps: true,
-          }),
-        ],
-        spacing: {
-          before: 240, // 12pt spacing before
-          after: 120, // 6pt spacing after
-        },
-      })
-    );
+      // Simple categorization logic (can be enhanced)
+      resumeData.skills.forEach((skill) => {
+        const skillLower = skill.toLowerCase();
+        if (
+          skillLower.includes("api") ||
+          skillLower.includes("framework") ||
+          skillLower.includes("language") ||
+          skillLower.includes("python") ||
+          skillLower.includes("javascript") ||
+          skillLower.includes("typescript") ||
+          skillLower.includes("react") ||
+          skillLower.includes("node")
+        ) {
+          categorized.Technical.push(skill);
+        } else if (
+          skillLower.includes("git") ||
+          skillLower.includes("make") ||
+          skillLower.includes("supabase") ||
+          skillLower.includes("firebase") ||
+          skillLower.includes("platform")
+        ) {
+          categorized["Tools & Platforms"].push(skill);
+        } else {
+          categorized["Core Competencies"].push(skill);
+        }
+      });
 
-    // Certification entries
-    for (const cert of resumeData.certifications) {
+      // Add categorized skills
+      Object.entries(categorized).forEach(([category, skills]) => {
+        if (skills.length > 0) {
+          children.push(
+            new Paragraph({
+              text: category,
+              style: "skillsCategory",
+            })
+          );
+
+          children.push(
+            new Paragraph({
+              text: skills.join(", "),
+              style: "skillsList",
+            })
+          );
+        }
+      });
+    } else {
+      // Comma-separated format
       children.push(
         new Paragraph({
-          children: [
-            new TextRun({
-              text: "• ",
-              size: 20, // 10pt
-              color: "000000",
-            }),
-            new TextRun({
-              text: cert,
-              size: 20, // 10pt
-              color: "000000",
-            }),
-          ],
-          indent: {
-            left: 360, // 0.25" indent for bullets
-          },
-          spacing: {
-            after: 60, // 3pt spacing
-          },
+          text: resumeData.skills.join(", "),
+          style: "skillsList",
         })
       );
     }
   }
 
-  // Create the document
+  // ===== CERTIFICATIONS SECTION =====
+  if (resumeData.certifications && resumeData.certifications.length > 0) {
+    children.push(
+      new Paragraph({
+        text: formatSectionHeader("CERTIFICATIONS"),
+        style: "sectionHeader",
+      })
+    );
+
+    const bulletChar = getBulletCharacter();
+    for (const cert of resumeData.certifications) {
+      children.push(
+        new Paragraph({
+          text: `${bulletChar} ${cert}`,
+          style: "bulletPoint",
+        })
+      );
+    }
+  }
+
+  // ===== CREATE DOCUMENT =====
   const doc = new Document({
     sections: [
       {
         properties: {
           page: {
-            margin: {
-              top: 720, // 0.5" top margin (in twips: 1" = 1440 twips)
-              right: 720, // 0.5" right margin
-              bottom: 720, // 0.5" bottom margin
-              left: 720, // 0.5" left margin
+            size: {
+              orientation: "portrait",
+              width: convertInchesToTwip(8.5), // 8.5 inches
+              height: convertInchesToTwip(11), // 11 inches
+            },
+            margins: {
+              top: convertInchesToTwip(resumeStyles.margins.top),
+              right: convertInchesToTwip(resumeStyles.margins.right),
+              bottom: convertInchesToTwip(resumeStyles.margins.bottom),
+              left: convertInchesToTwip(resumeStyles.margins.left),
             },
           },
         },
-        children: children,
+        children,
       },
     ],
-    styles: {
-      default: {
-        document: {
-          run: {
-            font: "Calibri", // ATS-friendly font
-            size: 20, // 10pt default
-            color: "000000",
-          },
-          paragraph: {
-            spacing: {
-              line: 240, // 12pt line spacing
-              lineRule: "auto",
-            },
-          },
-        },
-        heading1: {
-          run: {
-            font: "Calibri",
-            size: 32, // 16pt
-            bold: true,
-            color: "000000",
-          },
-          paragraph: {
-            spacing: {
-              after: 120, // 6pt spacing
-            },
-          },
-        },
-      },
-    },
+    styles,
   });
 
-  // Generate the blob
-  const blob = await Packer.toBlob(doc);
-  return blob;
+  // Generate buffer and return as blob
+  const buffer = await Packer.toBuffer(doc);
+  return new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
 }
 
+/**
+ * Generates a DOCX resume and returns it as a data URL for preview
+ * Note: Browsers cannot preview DOCX files directly, so this is mainly for download
+ * @param resumeData - The resume data to export
+ * @returns Data URL string for the DOCX (or blob URL)
+ */
+export async function exportResumeToDOCXDataURL(
+  resumeData: ResumeData
+): Promise<string> {
+  const blob = await exportResumeToDOCX(resumeData);
+  return URL.createObjectURL(blob);
+}
