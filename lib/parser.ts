@@ -139,10 +139,15 @@ ${text}`;
       );
     }
     if (error instanceof Error) {
-      // Check if it's a model not found error
+      // Check if it's a model not found error - try to provide helpful guidance
       if (error.message.includes("not_found_error") || error.message.includes("404")) {
+        const errorMsg = error.message.includes("model:") 
+          ? error.message.match(/model: ([^\s}]+)/)?.[1] 
+          : "unknown";
         throw new Error(
-          `Claude model not found. Please check that CLAUDE_MODEL environment variable is set to a valid model name, or update lib/claudeConfig.ts with a supported model.`
+          `Claude model "${errorMsg}" not found. Please set CLAUDE_MODEL environment variable to a valid model name. ` +
+          `Common models: claude-3-5-sonnet-20240620, claude-3-opus-20240229, claude-3-sonnet-20240229. ` +
+          `Check Anthropic's API documentation for the latest available models.`
         );
       }
       throw new Error(`Claude API error: ${error.message}`);
