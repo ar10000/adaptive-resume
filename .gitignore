@@ -12,6 +12,10 @@
 /.next/
 /out/
 
+# public directory (keep the directory but ignore contents)
+/public/*
+!/public/.gitkeep
+
 # production
 /build
 
