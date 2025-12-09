@@ -73,10 +73,10 @@ Extract and structure the data into this exact JSON format:
   ],
   "education": [
     {
-      "institution": "string (school/university name)",
-      "degree": "string (degree type, e.g., 'Bachelor of Science', 'Master of Arts')",
-      "field": "string (field of study, e.g., 'Computer Science', 'Business Administration')",
-      "graduationDate": "string (format: YYYY-MM or YYYY, use the format found in the document)"
+      "institution": "string (school/university name, REQUIRED)",
+      "degree": "string (degree type, e.g., 'Bachelor of Science', 'Master of Arts', REQUIRED - if not found, use 'Degree' or infer from field)",
+      "field": "string (field of study, e.g., 'Computer Science', 'Business Administration', REQUIRED - if not found, use 'General Studies')",
+      "graduationDate": "string (format: YYYY-MM or YYYY, REQUIRED - if not found, use 'N/A')"
     }
   ],
   "skills": ["string (list of skills mentioned)"],
@@ -217,23 +217,25 @@ function validateResumeData(data: any): asserts data is ResumeData {
     }
   });
 
-  // Validate education entries
+  // Validate education entries - be lenient with missing fields
   data.education.forEach((edu: any, index: number) => {
     if (!edu.institution || typeof edu.institution !== "string") {
       throw new Error(
         `Invalid resume data: education[${index}] missing institution`
       );
     }
+    // Provide defaults for missing optional fields
     if (!edu.degree || typeof edu.degree !== "string") {
-      throw new Error(`Invalid resume data: education[${index}] missing degree`);
+      // If degree is missing, try to infer from field or use a default
+      edu.degree = edu.field ? `${edu.field} Degree` : "Degree";
     }
     if (!edu.field || typeof edu.field !== "string") {
-      throw new Error(`Invalid resume data: education[${index}] missing field`);
+      // If field is missing, use a generic field
+      edu.field = "General Studies";
     }
     if (!edu.graduationDate || typeof edu.graduationDate !== "string") {
-      throw new Error(
-        `Invalid resume data: education[${index}] missing graduationDate`
-      );
+      // If graduation date is missing, use a placeholder
+      edu.graduationDate = "N/A";
     }
   });
 }
