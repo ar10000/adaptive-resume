@@ -91,6 +91,11 @@ CRITICAL RULES:
 5. For endDate in workExperience, use "Present" if the position is current
 6. Return ONLY valid JSON, no markdown, no code blocks, no explanations
 7. Ensure all dates are consistently formatted within the same field type
+8. For education entries, ALL fields are REQUIRED. If a field is missing:
+   - degree: Use "Degree" or infer from field name if possible
+   - field: Use "General Studies" if not specified
+   - graduationDate: Use "N/A" if not found
+   - institution: This is the only truly required field
 
 Text to parse:
 ${text}`;
