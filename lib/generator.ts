@@ -62,6 +62,16 @@ For work experience:
 
 Return JSON matching the ResumeData structure with rewritten content. The JSON must be valid and complete.
 
+CRITICAL: You MUST include ALL required top-level fields in your response:
+- personalInfo: object with name, email, and all other fields from the original resume
+- workExperience: array (even if empty)
+- education: array (even if empty)
+- skills: array (even if empty)
+- summary: string (if present in original, optional otherwise)
+- certifications: array (if present in original, optional otherwise)
+
+Do NOT omit any top-level fields. If you're unsure about a field, include it with the original value.
+
 Original Resume Data:
 ${originalResumeText}
 
