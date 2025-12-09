@@ -210,16 +210,27 @@ function validateTailoredResume(
     throw new Error("Invalid tailored resume: not an object");
   }
 
+  // Ensure personalInfo exists and fill from original if missing
   if (!tailoredResume.personalInfo || typeof tailoredResume.personalInfo !== "object") {
-    throw new Error("Invalid tailored resume: missing personalInfo");
+    // If personalInfo is completely missing, copy from original
+    tailoredResume.personalInfo = { ...originalResumeData.personalInfo };
   }
 
+  // Fill in missing personalInfo fields from original
   if (!tailoredResume.personalInfo.name || typeof tailoredResume.personalInfo.name !== "string") {
-    throw new Error("Invalid tailored resume: missing or invalid name");
+    tailoredResume.personalInfo.name = originalResumeData.personalInfo.name;
   }
-
   if (!tailoredResume.personalInfo.email || typeof tailoredResume.personalInfo.email !== "string") {
-    throw new Error("Invalid tailored resume: missing or invalid email");
+    tailoredResume.personalInfo.email = originalResumeData.personalInfo.email;
+  }
+  if (!tailoredResume.personalInfo.phone && originalResumeData.personalInfo.phone) {
+    tailoredResume.personalInfo.phone = originalResumeData.personalInfo.phone;
+  }
+  if (!tailoredResume.personalInfo.location && originalResumeData.personalInfo.location) {
+    tailoredResume.personalInfo.location = originalResumeData.personalInfo.location;
+  }
+  if (!tailoredResume.personalInfo.linkedIn && originalResumeData.personalInfo.linkedIn) {
+    tailoredResume.personalInfo.linkedIn = originalResumeData.personalInfo.linkedIn;
   }
 
   // Validate personal info matches (should be identical)
