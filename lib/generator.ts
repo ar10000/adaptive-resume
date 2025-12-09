@@ -332,16 +332,47 @@ function validateTailoredResume(
   });
 
   // Validate skills - check that all skills in tailored resume exist in original
+  // Use flexible matching to handle variations (plural/singular, case, etc.)
   if (!Array.isArray(tailoredResume.skills)) {
     throw new Error("Invalid tailored resume: skills must be an array");
   }
 
-  const originalSkillsLower = originalResumeData.skills.map((s) => s.toLowerCase().trim());
+  // Normalize skills for comparison (handle variations)
+  const normalizeSkill = (skill: string): string => {
+    return skill
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, " ") // Normalize whitespace
+      .replace(/s$/, "") // Remove trailing 's' for plural handling
+      .replace(/api$/, "api") // Normalize API variations
+      .replace(/apis$/, "api");
+  };
+
+  const originalSkillsNormalized = originalResumeData.skills.map((s) => normalizeSkill(s));
+  
   tailoredResume.skills.forEach((skill: string) => {
-    const skillLower = skill.toLowerCase().trim();
-    if (!originalSkillsLower.includes(skillLower)) {
+    const skillNormalized = normalizeSkill(skill);
+    
+    // Check exact match first
+    if (originalSkillsNormalized.includes(skillNormalized)) {
+      return;
+    }
+    
+    // Check if it's a variation (contains or is contained by an original skill)
+    const isVariation = originalResumeData.skills.some((originalSkill) => {
+      const origNormalized = normalizeSkill(originalSkill);
+      // Check if one contains the other (handles "REST API" vs "REST APIs")
+      return (
+        skillNormalized.includes(origNormalized) ||
+        origNormalized.includes(skillNormalized) ||
+        skillNormalized === origNormalized
+      );
+    });
+
+    if (!isVariation) {
       throw new Error(
-        `Validation failed: Skill "${skill}" not found in original resume. Cannot add new skills.`
+        `Validation failed: Skill "${skill}" not found in original resume. ` +
+        `Original skills: ${originalResumeData.skills.join(", ")}. Cannot add new skills.`
       );
     }
   });
