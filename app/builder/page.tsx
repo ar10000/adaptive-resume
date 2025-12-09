@@ -139,71 +139,10 @@ export default function BuilderPage() {
     }
   };
 
-  // Step 3: Download PDF
-  const handleDownloadPDF = async () => {
-    if (!resumeData) {
-      setError("No resume data available");
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/export-pdf", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ resumeData }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate PDF");
-      }
-
-      // Get the PDF blob
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "resume.pdf";
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to download PDF");
-    }
-  };
-
-  // Generate PDF preview
-  const generatePDFPreview = async (data: ResumeData) => {
-    try {
-      const response = await fetch("/api/export-pdf", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ resumeData: data }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate PDF preview");
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      setPdfUrl(url);
-    } catch (err) {
-      console.error("Error generating PDF preview:", err);
-      // Don't set error state for preview failures
-    }
-  };
-
-  // Update PDF preview when resume data changes in step 3
+  // Update resume data when user edits in step 3
+  // PDF preview is now handled automatically by PDFPreview component
   const handleResumeUpdate = (updatedData: ResumeData) => {
     setResumeData(updatedData);
-    // Optionally regenerate preview on update (debounced in real app)
-    // generatePDFPreview(updatedData);
   };
 
   // Generate cover letter
