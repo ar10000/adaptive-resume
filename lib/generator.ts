@@ -57,6 +57,8 @@ For work experience:
 - Reorder positions if more relevant ones should appear first
 - Rewrite job titles ONLY if the original title is very similar (e.g., "Software Engineer" -> "Senior Software Engineer" is NOT allowed unless explicitly stated)
 - Keep all original dates and companies exactly as provided
+- ALWAYS include all required fields: company, title, startDate, endDate, and bullets array
+- If you need to rewrite a title, still include it - never omit required fields
 
 Return JSON matching the ResumeData structure with rewritten content. The JSON must be valid and complete.
 
@@ -238,32 +240,43 @@ function validateTailoredResume(
     throw new Error("Validation failed: Cannot add work experiences not in original resume");
   }
 
-  // Validate each work experience entry
+  // Validate each work experience entry - fill in missing fields from original
   tailoredResume.workExperience.forEach((exp: any, index: number) => {
-    if (!exp.company || typeof exp.company !== "string") {
-      throw new Error(`Invalid tailored resume: workExperience[${index}] missing company`);
-    }
-    if (!exp.title || typeof exp.title !== "string") {
-      throw new Error(`Invalid tailored resume: workExperience[${index}] missing title`);
-    }
-    if (!exp.startDate || typeof exp.startDate !== "string") {
-      throw new Error(`Invalid tailored resume: workExperience[${index}] missing startDate`);
-    }
-    if (!exp.endDate || typeof exp.endDate !== "string") {
-      throw new Error(`Invalid tailored resume: workExperience[${index}] missing endDate`);
-    }
-    if (!Array.isArray(exp.bullets)) {
-      throw new Error(`Invalid tailored resume: workExperience[${index}] bullets must be an array`);
-    }
-
-    // Check that company and dates match original (dates should be identical)
+    // Find matching original experience
     const originalExp = originalResumeData.workExperience.find(
       (e) => e.company === exp.company && e.startDate === exp.startDate
+    ) || originalResumeData.workExperience.find(
+      (e) => e.company === exp.company
     );
+
     if (!originalExp) {
       throw new Error(
-        `Validation failed: Work experience at ${exp.company} (${exp.startDate}) not found in original resume`
+        `Validation failed: Work experience at ${exp.company} not found in original resume`
       );
+    }
+
+    // Fill in missing fields from original (but allow title to be rewritten)
+    if (!exp.company || typeof exp.company !== "string") {
+      exp.company = originalExp.company;
+    }
+    if (!exp.title || typeof exp.title !== "string") {
+      // Title can be missing, use original as fallback
+      exp.title = originalExp.title;
+    }
+    if (!exp.startDate || typeof exp.startDate !== "string") {
+      exp.startDate = originalExp.startDate;
+    }
+    if (!exp.endDate || typeof exp.endDate !== "string") {
+      exp.endDate = originalExp.endDate;
+    }
+    if (!Array.isArray(exp.bullets)) {
+      // If bullets are missing, use original bullets
+      exp.bullets = originalExp.bullets;
+    }
+
+    // Validate dates match original (dates should be identical)
+    if (exp.startDate !== originalExp.startDate) {
+      throw new Error(`Validation failed: Start date for ${exp.company} cannot be changed`);
     }
     if (exp.endDate !== originalExp.endDate) {
       throw new Error(`Validation failed: End date for ${exp.company} cannot be changed`);
@@ -280,17 +293,41 @@ function validateTailoredResume(
   }
 
   tailoredResume.education.forEach((edu: any, index: number) => {
+    // Find matching original education
+    const originalEdu = originalResumeData.education.find(
+      (e) => e.institution === edu.institution
+    ) || originalResumeData.education[index];
+
     if (!edu.institution || typeof edu.institution !== "string") {
-      throw new Error(`Invalid tailored resume: education[${index}] missing institution`);
+      if (originalEdu) {
+        edu.institution = originalEdu.institution;
+      } else {
+        throw new Error(`Invalid tailored resume: education[${index}] missing institution`);
+      }
     }
     if (!edu.degree || typeof edu.degree !== "string") {
-      throw new Error(`Invalid tailored resume: education[${index}] missing degree`);
+      // Fill from original if available
+      if (originalEdu) {
+        edu.degree = originalEdu.degree;
+      } else {
+        edu.degree = "Degree";
+      }
     }
     if (!edu.field || typeof edu.field !== "string") {
-      throw new Error(`Invalid tailored resume: education[${index}] missing field`);
+      // Fill from original if available
+      if (originalEdu) {
+        edu.field = originalEdu.field;
+      } else {
+        edu.field = "General Studies";
+      }
     }
     if (!edu.graduationDate || typeof edu.graduationDate !== "string") {
-      throw new Error(`Invalid tailored resume: education[${index}] missing graduationDate`);
+      // Fill from original if available
+      if (originalEdu) {
+        edu.graduationDate = originalEdu.graduationDate;
+      } else {
+        edu.graduationDate = "N/A";
+      }
     }
   });
 
