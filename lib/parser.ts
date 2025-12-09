@@ -139,6 +139,12 @@ ${text}`;
       );
     }
     if (error instanceof Error) {
+      // Check if it's a model not found error
+      if (error.message.includes("not_found_error") || error.message.includes("404")) {
+        throw new Error(
+          `Claude model not found. Please check that CLAUDE_MODEL environment variable is set to a valid model name, or update lib/claudeConfig.ts with a supported model.`
+        );
+      }
       throw new Error(`Claude API error: ${error.message}`);
     }
     throw new Error("Unknown error while structuring resume data");
