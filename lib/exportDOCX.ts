@@ -507,7 +507,12 @@ export async function exportResumeToDOCX(resumeData: ResumeData): Promise<Blob> 
 
   // Generate buffer and return as blob
   const buffer = await Packer.toBuffer(doc);
-  return new Blob([buffer], {
+  // Convert Buffer to ArrayBuffer for Blob constructor
+  const arrayBuffer = buffer.buffer.slice(
+    buffer.byteOffset,
+    buffer.byteOffset + buffer.byteLength
+  );
+  return new Blob([arrayBuffer], {
     type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   });
 }
