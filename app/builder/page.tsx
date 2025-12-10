@@ -7,6 +7,7 @@ import MatchAnalysis from "@/components/ui/MatchAnalysis";
 import ResumeEditor from "@/components/ResumeEditor";
 import PDFPreview from "@/components/PDFPreview";
 import VisualComparison from "@/components/VisualComparison";
+import BeforeAfterSlider from "@/components/BeforeAfterSlider";
 import { ResumeData, MatchAnalysis as MatchAnalysisType } from "@/types";
 import Button from "@/components/ui/Button";
 import DiffView from "@/components/DiffView";
@@ -23,7 +24,7 @@ export default function BuilderPage() {
   // PDF preview is now handled by PDFPreview component
   const [coverLetter, setCoverLetter] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"resume" | "coverLetter">("resume");
-  const [viewMode, setViewMode] = useState<"edit" | "compare">("edit");
+  const [viewMode, setViewMode] = useState<"edit" | "compare" | "beforeAfter">("edit");
   const [generatingCoverLetter, setGeneratingCoverLetter] = useState(false);
 
   // Loading states
@@ -448,7 +449,17 @@ export default function BuilderPage() {
                                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                               }`}
                             >
-                              Visual Comparison
+                              Side-by-Side
+                            </button>
+                            <button
+                              onClick={() => setViewMode("beforeAfter")}
+                              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                                viewMode === "beforeAfter"
+                                  ? "bg-primary-600 text-white"
+                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              }`}
+                            >
+                              Before/After Slider
                             </button>
                           </div>
                         </div>
@@ -482,6 +493,18 @@ export default function BuilderPage() {
                   resumeData && (
                     <div className="h-[calc(100vh-250px)]">
                       <VisualComparison
+                        originalResume={originalResumeData}
+                        tailoredResume={resumeData}
+                      />
+                    </div>
+                  )}
+
+                {/* Before/After Slider View */}
+                {viewMode === "beforeAfter" &&
+                  originalResumeData &&
+                  resumeData && (
+                    <div className="h-[calc(100vh-250px)]">
+                      <BeforeAfterSlider
                         originalResume={originalResumeData}
                         tailoredResume={resumeData}
                       />
