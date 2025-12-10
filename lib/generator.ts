@@ -353,7 +353,7 @@ function validateTailoredResume(
   });
 
   // Validate skills - check that all skills in tailored resume exist in original
-  // Use flexible matching to handle variations (plural/singular, case, etc.)
+  // Use flexible matching to handle variations (plural/singular, case, dash characters, etc.)
   if (!Array.isArray(tailoredResume.skills)) {
     throw new Error("Invalid tailored resume: skills must be an array");
   }
@@ -364,6 +364,8 @@ function validateTailoredResume(
       .toLowerCase()
       .trim()
       .replace(/\s+/g, " ") // Normalize whitespace
+      // Normalize different dash/hyphen characters to regular hyphen
+      .replace(/[\u2010-\u2015\u2212\u002D\u00AD]/g, "-") // Various dashes/hyphens to regular hyphen
       .replace(/s$/, "") // Remove trailing 's' for plural handling
       .replace(/api$/, "api") // Normalize API variations
       .replace(/apis$/, "api");
@@ -382,12 +384,29 @@ function validateTailoredResume(
     // Check if it's a variation (contains or is contained by an original skill)
     const isVariation = originalResumeData.skills.some((originalSkill) => {
       const origNormalized = normalizeSkill(originalSkill);
+      
+      // Exact match after normalization
+      if (skillNormalized === origNormalized) {
+        return true;
+      }
+      
       // Check if one contains the other (handles "REST API" vs "REST APIs")
-      return (
+      if (
         skillNormalized.includes(origNormalized) ||
-        origNormalized.includes(skillNormalized) ||
-        skillNormalized === origNormalized
-      );
+        origNormalized.includes(skillNormalized)
+      ) {
+        return true;
+      }
+      
+      // Handle cases like "Scikit-Learn" vs "Scikit‑Learn" (different dash characters)
+      // Remove all dashes and compare
+      const skillNoDashes = skillNormalized.replace(/-/g, "");
+      const origNoDashes = origNormalized.replace(/-/g, "");
+      if (skillNoDashes === origNoDashes && skillNoDashes.length > 0) {
+        return true;
+      }
+      
+      return false;
     });
 
     if (!isVariation) {
