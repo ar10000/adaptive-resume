@@ -91,7 +91,6 @@ export default function PDFPreview({
     };
 
     generatePDF();
-  }, [resumeData, selectedTheme]);
 
     // Cleanup function
     return () => {
@@ -99,7 +98,7 @@ export default function PDFPreview({
         URL.revokeObjectURL(pdfUrl);
       }
     };
-  }, [resumeData]);
+  }, [resumeData, selectedTheme, pdfUrl]);
 
   const handleDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
