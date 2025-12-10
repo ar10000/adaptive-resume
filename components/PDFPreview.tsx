@@ -1,7 +1,7 @@
 "use client";
 
 import { Document, Page, pdfjs } from "react-pdf";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ResumeData } from "@/types";
 import { exportResumeToPDF } from "@/lib/exportPDF";
 import { exportResumeToDOCX } from "@/lib/exportDOCX";
@@ -37,6 +37,7 @@ export default function PDFPreview({
   const [downloading, setDownloading] = useState<"pdf" | "docx" | null>(null);
   const [qualityScore, setQualityScore] = useState<number | null>(null);
   const [selectedTheme, setSelectedTheme] = useState<ThemePreset>(theme);
+  const pdfUrlRef = useRef<string | null>(null);
 
   // Initialize PDF.js worker
   useEffect(() => {
@@ -78,9 +79,10 @@ export default function PDFPreview({
         currentPdfUrl = url;
         
         // Clean up previous URL
-        if (pdfUrl) {
-          URL.revokeObjectURL(pdfUrl);
+        if (pdfUrlRef.current) {
+          URL.revokeObjectURL(pdfUrlRef.current);
         }
+        pdfUrlRef.current = url;
         
         setPdfUrl(url);
       } catch (err) {
@@ -100,8 +102,9 @@ export default function PDFPreview({
       if (currentPdfUrl) {
         URL.revokeObjectURL(currentPdfUrl);
       }
-      if (pdfUrl) {
-        URL.revokeObjectURL(pdfUrl);
+      if (pdfUrlRef.current) {
+        URL.revokeObjectURL(pdfUrlRef.current);
+        pdfUrlRef.current = null;
       }
     };
   }, [resumeData, selectedTheme]);
