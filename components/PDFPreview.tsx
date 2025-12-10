@@ -54,6 +54,8 @@ export default function PDFPreview({
       return;
     }
 
+    let currentPdfUrl: string | null = null;
+
     const generatePDF = async () => {
       setLoading(true);
       setError(null);
@@ -73,6 +75,7 @@ export default function PDFPreview({
 
         // Create object URL for preview
         const url = URL.createObjectURL(blob);
+        currentPdfUrl = url;
         
         // Clean up previous URL
         if (pdfUrl) {
@@ -94,11 +97,14 @@ export default function PDFPreview({
 
     // Cleanup function
     return () => {
+      if (currentPdfUrl) {
+        URL.revokeObjectURL(currentPdfUrl);
+      }
       if (pdfUrl) {
         URL.revokeObjectURL(pdfUrl);
       }
     };
-  }, [resumeData, selectedTheme, pdfUrl]);
+  }, [resumeData, selectedTheme]);
 
   const handleDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
