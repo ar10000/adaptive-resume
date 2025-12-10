@@ -506,7 +506,6 @@ function embedPDFProperties(doc: jsPDF, resumeData: ResumeData): void {
     author: "Adaptive Resume",
     keywords: "ATS-optimized, professional, tailored, resume",
     creator: "Adaptive Resume Engine v2.0",
-    producer: "Adaptive Resume Engine v2.0",
   });
 }
 
