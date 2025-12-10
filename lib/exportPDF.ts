@@ -41,16 +41,8 @@ export function exportResumeToPDF(
     compress: true,
   });
 
-  // Run visual QA check to get quality score
-  let visualScore = 100;
-  try {
-    // We'll generate a temporary blob to check, but this is expensive
-    // Instead, we'll calculate it after generation
-    // For now, we'll use a placeholder and calculate it properly below
-  } catch (error) {
-    // QA check failed, use default score
-    console.warn("Visual QA check failed, using default score");
-  }
+  // Embed PDF properties early (before rendering)
+  embedPDFProperties(doc, resumeData);
 
   // Destructure design system for easier access
   const { colors, typography, spacing, layout, sections, elements } = DESIGN_SYSTEM;
