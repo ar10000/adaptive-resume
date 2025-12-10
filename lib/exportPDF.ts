@@ -15,10 +15,6 @@ import {
 } from "./design/visualSystem";
 import { checkVisualConsistency } from "./qualityControl/visualQA";
 
-// Destructure design system for easier access
-const { colors, typography, spacing, layout, sections, elements } = DESIGN_SYSTEM;
-const { fonts, sizes, weights } = typography;
-
 /**
  * Generates a professionally styled, ATS-optimized PDF resume
  * Uses the comprehensive design system for consistent, visually stunning output
