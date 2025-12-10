@@ -1,6 +1,10 @@
 import { jsPDF } from "jspdf";
 import { ResumeData } from "@/types";
-import DESIGN_SYSTEM, {
+import {
+  getDesignSystemWithPreset,
+  ThemePreset,
+} from "./design/presets";
+import {
   getFontSize,
   getColor,
   getSpacing,
@@ -18,9 +22,16 @@ const { fonts, sizes, weights } = typography;
  * Generates a professionally styled, ATS-optimized PDF resume
  * Uses the comprehensive design system for consistent, visually stunning output
  * @param resumeData - The resume data to export
+ * @param theme - Theme preset to use (defaults to "professional")
  * @returns Blob containing the PDF file
  */
-export function exportResumeToPDF(resumeData: ResumeData): Blob {
+export function exportResumeToPDF(
+  resumeData: ResumeData,
+  theme: ThemePreset = "professional"
+): Blob {
+  // Get design system with preset applied
+  const DESIGN_SYSTEM = getDesignSystemWithPreset(theme);
+
   // Initialize jsPDF with design system settings
   const doc = new jsPDF({
     orientation: "portrait",
@@ -28,6 +39,10 @@ export function exportResumeToPDF(resumeData: ResumeData): Blob {
     format: "letter", // 8.5" x 11"
     compress: true,
   });
+
+  // Destructure design system for easier access
+  const { colors, typography, spacing, layout, sections, elements } = DESIGN_SYSTEM;
+  const { fonts, sizes, weights } = typography;
 
   // Page dimensions from design system
   const pageWidth = layout.maxWidth; // 612pt
