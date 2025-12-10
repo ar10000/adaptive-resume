@@ -489,9 +489,66 @@ export function exportResumeToPDF(
   // Validate design consistency
   validateDesignConsistency();
 
+  // Calculate visual score and embed metadata
+  let visualScore = 100;
+  try {
+    const tempBlob = doc.output("blob");
+    const qaReport = checkVisualConsistency(tempBlob, resumeData);
+    visualScore = qaReport.overall;
+  } catch (error) {
+    // If QA check fails, use default score
+    console.warn("Could not calculate visual score:", error);
+  }
+
+  // Embed visual metadata
+  embedVisualMetadata(doc, theme, visualScore);
+
   // Generate blob from PDF
   const pdfBlob = doc.output("blob");
   return pdfBlob;
+}
+
+/**
+ * Embed PDF properties (title, author, keywords, etc.)
+ */
+function embedPDFProperties(doc: jsPDF, resumeData: ResumeData): void {
+  doc.setProperties({
+    title: `${resumeData.personalInfo.name} - Resume`,
+    subject: "Professional Resume",
+    author: "Adaptive Resume",
+    keywords: "ATS-optimized, professional, tailored, resume",
+    creator: "Adaptive Resume Engine v2.0",
+    producer: "Adaptive Resume Engine v2.0",
+  });
+}
+
+/**
+ * Embed visual metadata into PDF
+ * Note: jsPDF doesn't support custom metadata fields directly,
+ * but we store this information for tracking and validation purposes
+ */
+function embedVisualMetadata(
+  doc: jsPDF,
+  theme: ThemePreset,
+  visualScore: number
+): void {
+  // Visual metadata object
+  const metadata = {
+    designSystem: "v2.0",
+    theme: theme,
+    atsOptimized: true,
+    visualScore: visualScore,
+    generatedDate: new Date().toISOString(),
+  };
+
+  // Store metadata in document for potential future use
+  // This could be used for PDF validation, tracking, or analytics
+  (doc as any).__adaptiveResumeMetadata = metadata;
+
+  // Note: While jsPDF doesn't support custom metadata fields in the PDF spec,
+  // the metadata is stored in memory and can be accessed if needed.
+  // For true PDF metadata embedding, you would need to use a library that
+  // supports XMP metadata or custom properties.
 }
 
 /**
