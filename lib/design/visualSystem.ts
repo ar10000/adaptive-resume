@@ -387,6 +387,3 @@ export function validateDesignSystem(): {
 // Export the design system as default
 export default DESIGN_SYSTEM;
 
-// Export type for use in other files
-export type { DesignSystem };
-
