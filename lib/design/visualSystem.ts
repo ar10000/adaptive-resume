@@ -355,10 +355,10 @@ export function validateDesignSystem(): {
   Object.entries(DESIGN_SYSTEM.spacing).forEach(([key, value]) => {
     if (typeof value === "number" && value < 0) {
       errors.push(`Invalid spacing for ${key}: ${value}`);
-    } else if (typeof value === "object" && "top" in value) {
+    } else if (typeof value === "object" && value !== null && "top" in value) {
       // pageMargin object
       Object.entries(value).forEach(([marginKey, marginValue]) => {
-        if (marginValue < 0) {
+        if (typeof marginValue === "number" && marginValue < 0) {
           errors.push(`Invalid page margin ${marginKey}: ${marginValue}`);
         }
       });
