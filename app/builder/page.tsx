@@ -181,41 +181,7 @@ export default function BuilderPage() {
     }
   };
 
-  // Step 3: Download DOCX
-  const handleDownloadDOCX = async () => {
-    if (!resumeData) {
-      setError("No resume data available");
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/export-docx", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ resumeData }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate DOCX");
-      }
-
-      // Get the DOCX blob
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "resume.docx";
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to download DOCX");
-    }
-  };
+  // Download functions are now handled by PDFPreview component
 
   return (
     <div className="min-h-screen bg-gray-50">
