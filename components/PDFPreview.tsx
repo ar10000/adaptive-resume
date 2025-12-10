@@ -5,6 +5,12 @@ import { useState, useEffect, useCallback } from "react";
 import { ResumeData } from "@/types";
 import { exportResumeToPDF } from "@/lib/exportPDF";
 import { exportResumeToDOCX } from "@/lib/exportDOCX";
+import {
+  checkVisualConsistency,
+  formatQualityScore,
+  getQualityBadgeColor,
+  getQualityStatus,
+} from "@/lib/qualityControl/visualQA";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import "react-pdf/dist/esm/Page/TextLayer.css";
 
@@ -20,6 +26,7 @@ export default function PDFPreview({ resumeData }: PDFPreviewProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState<"pdf" | "docx" | null>(null);
+  const [qualityScore, setQualityScore] = useState<number | null>(null);
 
   // Initialize PDF.js worker
   useEffect(() => {
@@ -45,6 +52,15 @@ export default function PDFPreview({ resumeData }: PDFPreviewProps) {
         const blob = exportResumeToPDF(resumeData);
         setPdfBlob(blob);
 
+        // Run visual QA check
+        try {
+          const qaReport = checkVisualConsistency(blob, resumeData);
+          setQualityScore(qaReport.overall);
+        } catch (qaError) {
+          // QA check failed, but don't block PDF generation
+          console.warn("Visual QA check failed:", qaError);
+        }
+
         // Create object URL for preview
         const url = URL.createObjectURL(blob);
         
@@ -58,6 +74,7 @@ export default function PDFPreview({ resumeData }: PDFPreviewProps) {
         setError(err instanceof Error ? err.message : "Failed to generate PDF");
         setPdfBlob(null);
         setPdfUrl(null);
+        setQualityScore(null);
       } finally {
         setLoading(false);
       }
@@ -250,6 +267,17 @@ export default function PDFPreview({ resumeData }: PDFPreviewProps) {
     <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
       {/* Controls Bar */}
       <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2">
+        {/* Quality Score Badge */}
+        {qualityScore !== null && (
+          <div
+            className={`rounded-md border px-3 py-1.5 text-sm font-medium ${getQualityBadgeColor(
+              qualityScore
+            )}`}
+            title={`Quality Status: ${getQualityStatus(qualityScore)}`}
+          >
+            {formatQualityScore(qualityScore)}
+          </div>
+        )}
         <div className="flex items-center gap-2">
           {/* Zoom Controls */}
           <button
