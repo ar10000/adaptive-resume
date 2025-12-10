@@ -365,8 +365,8 @@ export const resumeStyles: ResumeStyleConfig = {
  * Helper function to get font family with fallback
  */
 export function getFontFamily(): string {
-  const { primary, alternatives } = resumeStyles.fonts.primary;
-  return `${primary}, ${alternatives.join(", ")}, sans-serif`;
+  const { family, alternatives } = resumeStyles.fonts.primary;
+  return `${family}, ${alternatives.join(", ")}, sans-serif`;
 }
 
 /**
