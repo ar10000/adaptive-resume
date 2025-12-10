@@ -491,7 +491,7 @@ export async function exportResumeToDOCX(resumeData: ResumeData): Promise<Blob> 
               width: convertInchesToTwip(8.5), // 8.5 inches
               height: convertInchesToTwip(11), // 11 inches
             },
-            margins: {
+            margin: {
               top: convertInchesToTwip(resumeStyles.margins.top),
               right: convertInchesToTwip(resumeStyles.margins.right),
               bottom: convertInchesToTwip(resumeStyles.margins.bottom),
