@@ -6,6 +6,7 @@ import Spinner from "@/components/ui/Spinner";
 import MatchAnalysis from "@/components/ui/MatchAnalysis";
 import ResumeEditor from "@/components/ResumeEditor";
 import PDFPreview from "@/components/PDFPreview";
+import VisualComparison from "@/components/VisualComparison";
 import { ResumeData, MatchAnalysis as MatchAnalysisType } from "@/types";
 import Button from "@/components/ui/Button";
 import DiffView from "@/components/DiffView";
@@ -22,6 +23,7 @@ export default function BuilderPage() {
   // PDF preview is now handled by PDFPreview component
   const [coverLetter, setCoverLetter] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"resume" | "coverLetter">("resume");
+  const [viewMode, setViewMode] = useState<"edit" | "compare">("edit");
   const [generatingCoverLetter, setGeneratingCoverLetter] = useState(false);
 
   // Loading states
@@ -417,8 +419,46 @@ export default function BuilderPage() {
             {/* Resume Tab */}
             {activeTab === "resume" && (
               <div className="space-y-6">
-                {/* Diff View - Show if we have original and tailored resumes */}
+                {/* View Mode Toggle */}
                 {originalResumeData &&
+                  resumeData &&
+                  JSON.stringify(originalResumeData) !== JSON.stringify(resumeData) && (
+                    <div className="rounded-lg bg-white shadow-sm">
+                      <div className="border-b border-gray-200 p-4">
+                        <div className="flex items-center justify-between">
+                          <h2 className="text-xl font-semibold text-gray-900">
+                            Resume Preview
+                          </h2>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setViewMode("edit")}
+                              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                                viewMode === "edit"
+                                  ? "bg-primary-600 text-white"
+                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              }`}
+                            >
+                              Edit & Preview
+                            </button>
+                            <button
+                              onClick={() => setViewMode("compare")}
+                              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                                viewMode === "compare"
+                                  ? "bg-primary-600 text-white"
+                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              }`}
+                            >
+                              Visual Comparison
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                {/* Diff View - Show if we have original and tailored resumes */}
+                {viewMode === "edit" &&
+                  originalResumeData &&
                   resumeData &&
                   JSON.stringify(originalResumeData) !== JSON.stringify(resumeData) && (
                     <div className="rounded-lg bg-white shadow-sm">
@@ -436,29 +476,44 @@ export default function BuilderPage() {
                     </div>
                   )}
 
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                  {/* Left: Editor */}
-                  <div className="rounded-lg bg-white shadow-sm">
-                    <div className="border-b border-gray-200 p-4">
-                      <h2 className="text-xl font-semibold text-gray-900">
-                        Edit Resume
-                      </h2>
-                    </div>
-                    <div className="h-[calc(100vh-350px)] overflow-y-auto">
-                      <ResumeEditor
-                        resumeData={resumeData}
-                        onUpdate={handleResumeUpdate}
+                {/* Visual Comparison View */}
+                {viewMode === "compare" &&
+                  originalResumeData &&
+                  resumeData && (
+                    <div className="h-[calc(100vh-250px)]">
+                      <VisualComparison
+                        originalResume={originalResumeData}
+                        tailoredResume={resumeData}
                       />
                     </div>
-                  </div>
+                  )}
 
-                {/* Right: PDF Preview */}
-                <div className="rounded-lg bg-white shadow-sm">
-                  <div className="h-[calc(100vh-200px)]">
-                    <PDFPreview resumeData={resumeData} />
+                {/* Edit & Preview View */}
+                {viewMode === "edit" && (
+                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    {/* Left: Editor */}
+                    <div className="rounded-lg bg-white shadow-sm">
+                      <div className="border-b border-gray-200 p-4">
+                        <h2 className="text-xl font-semibold text-gray-900">
+                          Edit Resume
+                        </h2>
+                      </div>
+                      <div className="h-[calc(100vh-350px)] overflow-y-auto">
+                        <ResumeEditor
+                          resumeData={resumeData}
+                          onUpdate={handleResumeUpdate}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Right: PDF Preview */}
+                    <div className="rounded-lg bg-white shadow-sm">
+                      <div className="h-[calc(100vh-200px)]">
+                        <PDFPreview resumeData={resumeData} />
+                      </div>
+                    </div>
                   </div>
-                </div>
-                </div>
+                )}
               </div>
             )}
 
