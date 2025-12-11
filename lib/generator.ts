@@ -51,7 +51,10 @@ For the summary:
 For skills:
 - Reorder to prioritize skills mentioned in the job description
 - Do NOT add skills not in the original list
+- Do NOT invent or infer skills (e.g., if TensorFlow is listed, do NOT add PyTorch)
+- Do NOT add similar or related technologies that aren't explicitly listed
 - Group related skills if helpful
+- Use ONLY the exact skills from the original resume
 
 For work experience:
 - Reorder positions if more relevant ones should appear first
@@ -74,6 +77,9 @@ Do NOT omit any top-level fields. If you're unsure about a field, include it wit
 
 Original Resume Data:
 ${originalResumeText}
+
+EXACT SKILLS LIST (You MUST use ONLY these skills - do NOT add any others):
+${originalResumeData.skills.join(", ")}
 
 Target Job Description:
 ${jobDescription}
@@ -191,6 +197,8 @@ function formatResumeForGeneration(resumeData: ResumeData): string {
   // Skills
   parts.push("SKILLS:");
   parts.push(resumeData.skills.join(", "));
+  parts.push("");
+  parts.push("CRITICAL: The skills list above is EXACT. You MUST use ONLY these skills. Do NOT add, remove, or invent any skills.");
   parts.push("");
 
   // Certifications
@@ -355,7 +363,8 @@ function validateTailoredResume(
   // Validate skills - check that all skills in tailored resume exist in original
   // Use flexible matching to handle variations (plural/singular, case, dash characters, etc.)
   if (!Array.isArray(tailoredResume.skills)) {
-    throw new Error("Invalid tailored resume: skills must be an array");
+    // If skills array is missing or invalid, use original skills as fallback
+    tailoredResume.skills = [...originalResumeData.skills];
   }
 
   // Normalize skills for comparison (handle variations)
@@ -372,6 +381,9 @@ function validateTailoredResume(
   };
 
   const originalSkillsNormalized = originalResumeData.skills.map((s) => normalizeSkill(s));
+  
+  // Collect invalid skills to remove
+  const invalidSkills: string[] = [];
   
   tailoredResume.skills.forEach((skill: string) => {
     const skillNormalized = normalizeSkill(skill);
@@ -410,12 +422,31 @@ function validateTailoredResume(
     });
 
     if (!isVariation) {
-      throw new Error(
-        `Validation failed: Skill "${skill}" not found in original resume. ` +
-        `Original skills: ${originalResumeData.skills.join(", ")}. Cannot add new skills.`
-      );
+      invalidSkills.push(skill);
     }
   });
+  
+  // Remove invalid skills and log warnings
+  if (invalidSkills.length > 0) {
+    invalidSkills.forEach((skill) => {
+      console.warn(
+        `Warning: Skill "${skill}" not found in original resume and will be removed. ` +
+        `Original skills: ${originalResumeData.skills.join(", ")}.`
+      );
+    });
+    // Filter out invalid skills
+    tailoredResume.skills = tailoredResume.skills.filter(
+      (skill: string) => !invalidSkills.includes(skill)
+    );
+    
+    // If all skills were filtered out, restore original skills as fallback
+    if (tailoredResume.skills.length === 0) {
+      console.warn(
+        "All skills were invalid. Restoring original skills list as fallback."
+      );
+      tailoredResume.skills = [...originalResumeData.skills];
+    }
+  }
 
   // Validate certifications if present
   if (tailoredResume.certifications) {
