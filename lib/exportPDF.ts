@@ -509,10 +509,8 @@ export function exportResumeToPDF(
   // Embed visual metadata first (before output)
   embedVisualMetadata(doc, theme, 100); // Use default score, calculate after if needed
 
-  // Generate blob from PDF with consistent output options
-  const pdfBlob = doc.output("blob", {
-    // Ensure consistent output
-  });
+  // Generate blob from PDF
+  const pdfBlob = doc.output("blob");
 
   // Calculate visual score after generating the final blob
   let visualScore = 100;
