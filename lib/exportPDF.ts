@@ -185,9 +185,14 @@ export function exportResumeToPDF(
 
   /**
    * Helper: Check page break and add new page if needed
+   * Note: This function updates yPosition, but rendering functions use local y variables
+   * The return value indicates if a page break occurred, and callers should reset their local y
    */
-  function checkPageBreak(requiredHeight: number): boolean {
-    if (yPosition + requiredHeight > pageHeight - spacing.pageMargin.bottom) {
+  function checkPageBreak(requiredHeight: number, currentY?: number): boolean {
+    // Use provided currentY if available, otherwise use module-level yPosition
+    const yToCheck = currentY !== undefined ? currentY : yPosition;
+    
+    if (yToCheck + requiredHeight > pageHeight - spacing.pageMargin.bottom) {
       doc.addPage();
       yPosition = spacing.pageMargin.top;
       return true;
@@ -261,7 +266,7 @@ export function exportResumeToPDF(
     const lineHeight = calculateLineHeight(sizes.body);
 
     lines.forEach((line: string) => {
-      if (checkPageBreak(lineHeight)) {
+      if (checkPageBreak(lineHeight, y)) {
         y = spacing.pageMargin.top;
       }
       addText(doc, line, spacing.pageMargin.left, y, {
@@ -294,7 +299,7 @@ export function exportResumeToPDF(
         job.bullets.length * (calculateLineHeight(sizes.body) + spacing.bulletGap) +
         spacing.jobGap;
 
-      if (checkPageBreak(estimatedHeight)) {
+      if (checkPageBreak(estimatedHeight, y)) {
         y = spacing.pageMargin.top;
       }
 
@@ -326,7 +331,7 @@ export function exportResumeToPDF(
 
       // Bullets
       job.bullets.forEach((bullet) => {
-        if (checkPageBreak(calculateLineHeight(sizes.body) * 2)) {
+        if (checkPageBreak(calculateLineHeight(sizes.body) * 2, y)) {
           y = spacing.pageMargin.top;
         }
         y = addBullet(doc, bullet, x, y);
@@ -354,7 +359,7 @@ export function exportResumeToPDF(
     education.forEach((edu) => {
       const x = spacing.pageMargin.left;
 
-      if (checkPageBreak(calculateLineHeight(sizes.body) * 2)) {
+      if (checkPageBreak(calculateLineHeight(sizes.body) * 2, y)) {
         y = spacing.pageMargin.top;
       }
 
@@ -397,7 +402,7 @@ export function exportResumeToPDF(
     const lineHeight = calculateLineHeight(sizes.body);
 
     lines.forEach((line: string) => {
-      if (checkPageBreak(lineHeight)) {
+      if (checkPageBreak(lineHeight, y)) {
         y = spacing.pageMargin.top;
       }
       addText(doc, line, x, y, {
@@ -422,7 +427,7 @@ export function exportResumeToPDF(
     const x = spacing.pageMargin.left;
 
     certifications.forEach((cert) => {
-      if (checkPageBreak(calculateLineHeight(sizes.body))) {
+      if (checkPageBreak(calculateLineHeight(sizes.body), y)) {
         y = spacing.pageMargin.top;
       }
       y = addBullet(doc, cert, x, y);
@@ -452,6 +457,9 @@ export function exportResumeToPDF(
   }
 
   // ===== MAIN RENDERING =====
+  // Debug logging to verify all data is present
+  console.log(`[PDF Export] Rendering resume with ${resumeData.workExperience.length} work experience entries, ${resumeData.education.length} education entries`);
+  
   let y = renderNameSection(doc, resumeData);
 
   if (resumeData.summary) {
@@ -459,10 +467,12 @@ export function exportResumeToPDF(
   }
 
   if (resumeData.workExperience.length > 0) {
+    console.log(`[PDF Export] Rendering ${resumeData.workExperience.length} work experience entries`);
     y = renderWorkExperience(doc, resumeData.workExperience, y);
   }
 
   if (resumeData.education.length > 0) {
+    console.log(`[PDF Export] Rendering ${resumeData.education.length} education entries`);
     y = renderEducation(doc, resumeData.education, y);
   }
 
@@ -473,6 +483,10 @@ export function exportResumeToPDF(
   if (resumeData.certifications && resumeData.certifications.length > 0) {
     y = renderCertifications(doc, resumeData.certifications, y);
   }
+  
+  // Log final page count
+  const totalPages = doc.getNumberOfPages();
+  console.log(`[PDF Export] Generated PDF with ${totalPages} page(s)`);
 
   // Validate design consistency
   validateDesignConsistency();
