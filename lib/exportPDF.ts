@@ -86,7 +86,6 @@ export function exportResumeToPDF(
 
     const textOptions: any = {
       align: options.align || "left", // Explicitly set alignment, default to left
-      renderingMode: "fill", // Normal text rendering, not outline or invisible
     };
     
     // Only add maxWidth if explicitly provided (for text wrapping)
@@ -95,7 +94,6 @@ export function exportResumeToPDF(
       textOptions.maxWidth = options.maxWidth;
     }
 
-    // Ensure no text stretching or justification
     doc.text(text, x, y, textOptions);
   }
 
@@ -268,15 +266,12 @@ export function exportResumeToPDF(
     const lines = splitText(doc, summary, sizes.body, layout.contentWidth);
     const lineHeight = calculateLineHeight(sizes.body);
 
-    lines.forEach((line: string, index: number) => {
+    lines.forEach((line: string) => {
       if (checkPageBreak(lineHeight, y)) {
         y = spacing.pageMargin.top;
       }
-      // Trim line to ensure no extra spaces cause stretching
-      const trimmedLine = line.trim();
-      addText(doc, trimmedLine, spacing.pageMargin.left, y, {
+      addText(doc, line, spacing.pageMargin.left, y, {
         size: sizes.body,
-        align: "left", // Explicitly left-align to prevent any stretching
       });
       y += lineHeight;
     });
@@ -407,16 +402,12 @@ export function exportResumeToPDF(
     const lines = splitText(doc, skillsText, sizes.body, layout.contentWidth);
     const lineHeight = calculateLineHeight(sizes.body);
 
-    lines.forEach((line: string, index: number) => {
+    lines.forEach((line: string) => {
       if (checkPageBreak(lineHeight, y)) {
         y = spacing.pageMargin.top;
       }
-      // Trim line to ensure no extra spaces cause stretching
-      const trimmedLine = line.trim();
-      // Render exactly like Summary section for consistency
-      addText(doc, trimmedLine, x, y, {
+      addText(doc, line, x, y, {
         size: sizes.body,
-        align: "left", // Explicitly left-align to prevent any stretching
       });
       y += lineHeight;
     });
