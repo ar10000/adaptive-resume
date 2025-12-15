@@ -53,7 +53,9 @@ export function exportResumeToPDF(
    * Helper: Set font with consistent styling
    */
   function setFont(doc: jsPDF, size: number, weight: string = "normal") {
-    const fontFamily = fonts.primary.split(",")[0].trim(); // Get first font (Calibri)
+    // Use standard PDF fonts for consistent rendering across all viewers
+    // Helvetica is a standard PDF font that all viewers render identically
+    const fontFamily = "helvetica"; // Standard PDF font, not Calibri
     const style =
       weight === "bold" || weight === "600" ? "bold" : "normal";
     doc.setFont(fontFamily, style);
