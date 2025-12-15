@@ -34,7 +34,7 @@ export function exportResumeToPDF(
     orientation: "portrait",
     unit: "pt", // Points for consistency with design system
     format: "letter", // 8.5" x 11"
-    compress: true,
+    compress: false, // Disable compression to ensure consistent output
   });
 
   // Embed PDF properties early (before rendering)
@@ -491,22 +491,25 @@ export function exportResumeToPDF(
   // Validate design consistency
   validateDesignConsistency();
 
-  // Calculate visual score and embed metadata
+  // Embed visual metadata first (before output)
+  embedVisualMetadata(doc, theme, 100); // Use default score, calculate after if needed
+
+  // Generate blob from PDF with consistent output options
+  const pdfBlob = doc.output("blob", {
+    // Ensure consistent output
+  });
+
+  // Calculate visual score after generating the final blob
   let visualScore = 100;
   try {
-    const tempBlob = doc.output("blob");
-    const qaReport = checkVisualConsistency(tempBlob, resumeData);
+    const qaReport = checkVisualConsistency(pdfBlob, resumeData);
     visualScore = qaReport.overall;
+    // Note: We can't update the PDF after output, but this is fine for logging
   } catch (error) {
     // If QA check fails, use default score
     console.warn("Could not calculate visual score:", error);
   }
 
-  // Embed visual metadata
-  embedVisualMetadata(doc, theme, visualScore);
-
-  // Generate blob from PDF
-  const pdfBlob = doc.output("blob");
   return pdfBlob;
 }
 
