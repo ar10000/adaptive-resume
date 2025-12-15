@@ -84,18 +84,17 @@ export function exportResumeToPDF(
     const rgb = hexToRgb(color);
     doc.setTextColor(rgb[0], rgb[1], rgb[2]);
 
-    const textOptions: any = {};
+    const textOptions: any = {
+      align: options.align || "left", // Explicitly set alignment, default to left
+    };
+    
+    // Only add maxWidth if explicitly provided (for text wrapping)
+    // But don't use it for already-split lines to avoid justification
     if (options.maxWidth) {
       textOptions.maxWidth = options.maxWidth;
     }
 
-    if (options.align === "right") {
-      doc.text(text, x, y, { ...textOptions, align: "right" });
-    } else if (options.align === "center") {
-      doc.text(text, x, y, { ...textOptions, align: "center" });
-    } else {
-      doc.text(text, x, y, textOptions);
-    }
+    doc.text(text, x, y, textOptions);
   }
 
   /**
@@ -411,6 +410,7 @@ export function exportResumeToPDF(
       y += lineHeight;
     });
 
+    // After last line, y is already at bottom of line, so sectionGap provides spacing before next section
     return y + spacing.sectionGap;
   }
 
@@ -433,7 +433,8 @@ export function exportResumeToPDF(
       y = addBullet(doc, cert, x, y);
     });
 
-    return y + spacing.sectionGap;
+    // Don't add sectionGap for the last section
+    return y;
   }
 
   /**
@@ -477,7 +478,10 @@ export function exportResumeToPDF(
   }
 
   if (resumeData.skills.length > 0) {
-    y = renderSkills(doc, resumeData.skills, y);
+    const skillsEndY = renderSkills(doc, resumeData.skills, y);
+    // Skills always adds sectionGap, but we only need it if there's another section
+    const hasNextSection = resumeData.certifications && resumeData.certifications.length > 0;
+    y = hasNextSection ? skillsEndY : skillsEndY - spacing.sectionGap;
   }
 
   if (resumeData.certifications && resumeData.certifications.length > 0) {
