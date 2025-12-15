@@ -67,13 +67,15 @@ Return JSON matching the ResumeData structure with rewritten content. The JSON m
 
 CRITICAL: You MUST include ALL required top-level fields in your response:
 - personalInfo: object with name, email, and all other fields from the original resume
-- workExperience: array (even if empty)
-- education: array (even if empty)
+- workExperience: array (even if empty) - MUST include ALL work experience entries from the original resume
+- education: array (even if empty) - MUST include ALL education entries from the original resume
 - skills: array (even if empty)
 - summary: string (if present in original, optional otherwise)
 - certifications: array (if present in original, optional otherwise)
 
 Do NOT omit any top-level fields. If you're unsure about a field, include it with the original value.
+
+VERY IMPORTANT: You MUST include ALL work experience entries and ALL education entries from the original resume. Do NOT skip or omit any entries, even if the response is getting long. The response must be complete.
 
 Original Resume Data:
 ${originalResumeText}
@@ -96,7 +98,7 @@ Remember: You can ONLY work with what's in the original resume. Never add, inven
   try {
     const message = await anthropic.messages.create({
       model: CLAUDE_MODEL,
-      max_tokens: 4096,
+      max_tokens: 8192, // Increased from 4096 to handle longer resumes
       messages: [
         {
           role: "user",
@@ -104,6 +106,14 @@ Remember: You can ONLY work with what's in the original resume. Never add, inven
         },
       ],
     });
+
+    // Check if response was truncated
+    if (message.stop_reason === "max_tokens") {
+      throw new Error(
+        "Response was truncated due to token limit. Your resume may be too long. " +
+        "Please try with a shorter resume or contact support."
+      );
+    }
 
     // Extract text from Claude's response
     const responseText =
@@ -123,8 +133,33 @@ Remember: You can ONLY work with what's in the original resume. Never add, inven
       jsonText = jsonText.replace(/^```\s*/, "").replace(/\s*```$/, "");
     }
 
+    // Check if JSON appears incomplete (common sign of truncation)
+    if (!jsonText.trim().endsWith("}") && !jsonText.trim().endsWith("]")) {
+      // Try to detect if it's a truncated JSON
+      const openBraces = (jsonText.match(/{/g) || []).length;
+      const closeBraces = (jsonText.match(/}/g) || []).length;
+      if (openBraces > closeBraces) {
+        throw new Error(
+          "Response appears to be truncated. The generated resume JSON is incomplete. " +
+          "This may happen with very long resumes. Please try again or contact support."
+        );
+      }
+    }
+
     // Parse JSON
-    const tailoredResume = JSON.parse(jsonText) as ResumeData;
+    let tailoredResume: ResumeData;
+    try {
+      tailoredResume = JSON.parse(jsonText) as ResumeData;
+    } catch (parseError) {
+      // Check if it's a JSON parsing error that might indicate truncation
+      if (parseError instanceof SyntaxError) {
+        throw new Error(
+          `Failed to parse response as JSON. The response may have been truncated. ` +
+          `Error: ${parseError.message}. Please try again with a shorter resume or contact support.`
+        );
+      }
+      throw parseError;
+    }
 
     // Validate the structure and ensure no fabrication
     validateTailoredResume(tailoredResume, originalResumeData);
