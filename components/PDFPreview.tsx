@@ -131,11 +131,13 @@ export default function PDFPreview({
   };
 
   const handleDownloadPDF = async () => {
-    if (!resumeData || !pdfBlob) return;
+    if (!resumeData) return;
 
     setDownloading("pdf");
     try {
-      const url = URL.createObjectURL(pdfBlob);
+      // Regenerate PDF with current theme to ensure consistency
+      const blob = exportResumeToPDF(resumeData, selectedTheme);
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.download = `${resumeData.personalInfo.name.replace(/\s+/g, "_")}_Resume.pdf`;
