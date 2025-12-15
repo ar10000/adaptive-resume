@@ -148,7 +148,7 @@ export const PROFESSIONAL_PRESET: Partial<DesignSystem> = {
       bottom: 40,
       left: 45,
     },
-    sectionGap: 18,
+    sectionGap: 12, // Reduced to prevent double spacing with headerToContent
     jobGap: 14,
     bulletGap: 6,
     lineHeight: 1.4,

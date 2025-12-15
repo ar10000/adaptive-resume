@@ -159,8 +159,8 @@ const DESIGN_SYSTEM: DesignSystem = {
       left: 45,
     },
 
-    // Between major sections
-    sectionGap: 18,
+    // Between major sections (reduced to account for header spacing)
+    sectionGap: 12,
 
     // Within sections
     jobGap: 14, // Between different jobs
