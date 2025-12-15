@@ -433,7 +433,7 @@ export function exportResumeToPDF(
       y = addBullet(doc, cert, x, y);
     });
 
-    return y;
+    return y + spacing.sectionGap;
   }
 
   /**
